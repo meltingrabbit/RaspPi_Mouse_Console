@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="utf-8">
+	<title>RaspPi Mouse Console</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+	<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+	<!-- <link rel="stylesheet"href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"> -->
+	<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script> -->
+	<script type="text/javascript" src="/socket.io/socket.io.js"></script>
+	<script type="text/javascript" src="./pimouse.js"></script>
+	<link href="./pimouse.css" type="text/css" rel="stylesheet">
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.3.0/Chart.bundle.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+	<h1>RaspPi Mouse Console</h1>
+<!-- 	<form class="form-inline">
+		<div class="form-group">
+			<label for="msgForm">メッセージ：</label>
+			<input type="text" class="form-control" id="msgForm">
+		</div>
+		<button type="submit" class="btn btn-primary">送信</button>
+	</form>
+	<div id="chatLogs"></div> -->
+
+	<div class="row">
+		<div class="col-5">
+			<h4>Motor：</h4>
+			<div class="row">
+				<button type="button" id="motorOn"    class="col-md-2 btn btn-danger">Power ON</button>
+				<button type="button" id="motorOff"   class="col-md-2 btn btn-danger">Power OFF</button>
+				<button type="button" id="motorGoF"   class="col-md-1 btn btn-danger">直進</button>
+				<button type="button" id="motorGoB"   class="col-md-1 btn btn-danger">後退</button>
+				<button type="button" id="motorStop"  class="col-md-1 btn btn-danger">停止</button>
+				<button type="button" id="motorTurnR" class="col-md-2 btn btn-danger">右回転</button>
+				<button type="button" id="motorTurnL" class="col-md-2 btn btn-danger">左回転</button>
+			</div>
+			<h4>MIC：</h4>
+			<div class="row">
+				<button type="button" id="micOn"  class="col-md-3 btn btn-danger">MIC ON</button>
+				<button type="button" id="micOff" class="col-md-3 btn btn-danger">MIC OFF</button>
+			</div>
+			<h4>LED：</h4>
+			<div class="row">
+				<button type="button" id="ledOn"  class="col-3 btn btn-danger">LED ON</button>
+				<button type="button" id="ledOff" class="col-3 btn btn-danger">LED OFF</button>
+			</div>
+			<h4>カメラ：</h4>
+			<div class="row">
+				<button type="button" id="cameraOn"  class="col-3 btn btn-danger">ON</button>
+				<button type="button" id="cameraOff" class="col-3 btn btn-danger">OFF</button>
+				<!-- <object id="camstream" style="width:300px;height:240px" ></object> -->
+			</div>
+			<img id="cameraCapture">
+			<h4>測距センサ：</h4>
+			<div class="row">
+				<button type="button" id="lightSensorSingle"   class="col-3 btn btn-danger">シングル</button>
+				<button type="button" id="lightSensorSeqBegin" class="col-3 btn btn-danger">連続開始</button>
+				<button type="button" id="lightSensorSeqEnd"   class="col-3 btn btn-danger">連続終了</button>
+			</div>
+			<canvas id="lightSensorChart"></canvas>
+			<!-- <div id="lightSensorLogs" class="log"></div> -->
+		</div>
+		<div class="col-4">
+			<h4>Server Console：</h4>
+			<div id="serverConsoleLogs" class="consoleLog">
+				<!-- <p>hoge</p> -->
+			</div>
+			<h4>Robot Console：</h4>
+			<div id="RobotConsoleLogs" class="consoleLog">
+				<!-- <p>hoge</p> -->
+			</div>
+		</div>
+		<div class="col-3">
+			<h4>サーバー接続ロボット：</h4>
+			<div id="serverConnectedRobot" class="row">
+				<p class="col-6 d-flex align-items-center my-p-btn">hoge</p>
+				<div class="col-6 btn-group btn-group-toggle" data-toggle="buttons">
+					<label name="hoge" class="robot-connect col-6 btn btn-danger active">
+						<input type="radio" autocomplete="off" checked>接続
+					</label>
+					<label name="hoge" class="robot-disconnect col-6 btn btn-danger">
+						<input type="radio" autocomplete="off">切断
+					</label>
+				</div>
+				<p class="col-6 d-flex align-items-center my-p-btn">hoge</p>
+				<div class="col-6 btn-group btn-group-toggle" data-toggle="buttons">
+					<label name="fuga" class="robot-connect col-6 btn btn-danger">
+						<input type="radio" autocomplete="off">接続
+					</label>
+					<label name="fuga" class="robot-disconnect col-6 btn btn-danger active">
+						<input type="radio" autocomplete="off" checked>切断
+					</label>
+				</div>
+			</div>
+			<h4>サーバー接続クライアント：</h4>
+			<div id="serverConnectedPc" class="row">
+				<p class="col-12 d-flex align-items-center my-p-btn">hoge</p>
+				<p class="col-12 d-flex align-items-center my-p-btn">hoge</p>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+</body>
+</html>
