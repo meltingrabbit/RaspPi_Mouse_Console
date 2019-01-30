@@ -1,10 +1,10 @@
 
 // settings
-// var IP_RELAY_SERVER = '192.168.10.120'
-var IP_RELAY_SERVER = '192.168.100.108'
+var IP_RELAY_SERVER = '192.168.10.120';
+// var IP_RELAY_SERVER = '192.168.100.108';
 
 // web camera
-var NodeWebcam  = require('node-webcam');
+var node_webcam  = require('node-webcam');
 // ↓ロジクールカメラC270 HD WEBCAM
 var opts_camera = {
 	// サイズがかえられない？？
@@ -14,7 +14,7 @@ var opts_camera = {
 	// quality:        80,
 	callbackReturn: "base64"
 };
-// ↓ちっこいカメラ
+// ↓ちっこいカメラ LOAS MCM-15W
 // var opts_camera = {
 // 	width:          320,
 // 	height:         240,
@@ -23,15 +23,15 @@ var opts_camera = {
 
 
 // マイク
-// mic
-var fs       = require('fs');
-var mic      = require('mic');
-var pcm      = require('pcm');
-var micInstance;
+var fs  = require('fs');
+var mic = require('mic');
+var pcm = require('pcm');
+var mic_instance;
 
 
 // var client_ws_main = io.connect('http://192.168.10.134:3000');
 var socket = require('socket.io-client')('http://' + IP_RELAY_SERVER + ':3000');
+
 
 // 接続確立
 socket.on('connect', function(){
@@ -43,7 +43,7 @@ socket.on('connect', function(){
 	}
 	socket.emit('r2s_ROBOT_REGISTER', {value : client});
 
-	DispConsole('Disconnected from the relay server!');
+	DispConsole('Connected from the relay server!');
 	DispConsole('ID: ' + socket.id);
 	DispConsole(socket.connected);
 });
@@ -86,48 +86,35 @@ socket.on('s2r_RESET', function(data) {
 });
 
 
-// var motor_default_val = 1000;
+var motor_default_val = 1000;
 socket.on('s2r_MOTOR_ON', function(data) {
 	DispConsole('s2r_MOTOR_ON');
-	const exec = require('child_process').exec;
-	exec('echo 1 > /dev/rtmotoren0', (err, stdout, stderr) => { });
+	PowerOnMotor();
 });
 socket.on('s2r_MOTOR_OFF', function(data) {
 	DispConsole('s2r_MOTOR_OFF');
-	const exec = require('child_process').exec;
-	exec('echo 0 > /dev/rtmotor_raw_l0', (err, stdout, stderr) => { });
-	exec('echo 0 > /dev/rtmotor_raw_r0', (err, stdout, stderr) => { });
-	exec('echo 0 > /dev/rtmotoren0', (err, stdout, stderr) => { });
+	SetMotorRaw(0, 0);
+	PowerOffMotor();
 });
 socket.on('s2r_MOTOR_GO_F', function(data) {
 	DispConsole('s2r_MOTOR_GO_F');
-	const exec = require('child_process').exec;
-	exec('echo 1000 > /dev/rtmotor_raw_l0', (err, stdout, stderr) => { });
-	exec('echo 1000 > /dev/rtmotor_raw_r0', (err, stdout, stderr) => { });
+	SetMotorRaw(motor_default_val, motor_default_val);
 });
 socket.on('s2r_MOTOR_GO_B', function(data) {
 	DispConsole('s2r_MOTOR_GO_B');
-	const exec = require('child_process').exec;
-	exec('echo -1000 > /dev/rtmotor_raw_l0', (err, stdout, stderr) => { });
-	exec('echo -1000 > /dev/rtmotor_raw_r0', (err, stdout, stderr) => { });
+	SetMotorRaw(-motor_default_val, -motor_default_val);
 });
 socket.on('s2r_MOTOR_STOP', function(data) {
 	DispConsole('s2r_MOTOR_STOP');
-	const exec = require('child_process').exec;
-	exec('echo 0 > /dev/rtmotor_raw_l0', (err, stdout, stderr) => { });
-	exec('echo 0 > /dev/rtmotor_raw_r0', (err, stdout, stderr) => { });
+	SetMotorRaw(0, 0);
 });
 socket.on('s2r_MOTOR_TURN_R', function(data) {
 	DispConsole('s2r_MOTOR_TURN_R');
-	const exec = require('child_process').exec;
-	exec('echo -1000 > /dev/rtmotor_raw_l0', (err, stdout, stderr) => { });
-	exec('echo 1000 > /dev/rtmotor_raw_r0', (err, stdout, stderr) => { });
+	SetMotorRaw(-motor_default_val, motor_default_val);
 });
 socket.on('s2r_MOTOR_TURN_L', function(data) {
 	DispConsole('s2r_MOTOR_TURN_L');
-	const exec = require('child_process').exec;
-	exec('echo 1000 > /dev/rtmotor_raw_l0', (err, stdout, stderr) => { });
-	exec('echo -1000 > /dev/rtmotor_raw_r0', (err, stdout, stderr) => { });
+	SetMotorRaw(motor_default_val, -motor_default_val);
 });
 
 
@@ -190,8 +177,6 @@ socket.on('s2r_LS_SEQ_END', function(data) {
 
 
 
-
-
 function ResetRobot() {
 	if (timer_lt.is_on == 1) {
 		clearInterval(timer_lt.id);
@@ -201,11 +186,13 @@ function ResetRobot() {
 	}
 	timer_lt.is_on = 0;
 	timer_camera.is_on = 0;
+	SetMotorRaw(0, 0);
+	PowerOffMotor();
 	OffLed();
 }
 
 
-
+// ########## LED ##########
 // LED ON
 function OnLed() {
 	// shell実行（非同期）
@@ -217,7 +204,6 @@ function OnLed() {
 	});
 	DispConsole("LED ON");
 }
-
 
 // LED OFF
 function OffLed() {
@@ -232,6 +218,7 @@ function OffLed() {
 }
 
 
+// ########## 測距センサ ##########
 // 光センサの値を読み取って返す
 function SendLtValue() {
 	var ret = {
@@ -251,10 +238,10 @@ function SendLtValue() {
 }
 
 
-// Camera
+// ########## カメラ ##########
 function SendCameraCapture() {
 	// console.log("Capture! outer");
-	NodeWebcam.capture( "test_picture", opts_camera, function( err, data ) {
+	node_webcam.capture( "test_picture", opts_camera, function( err, data ) {
 		// console.log("Capture! inner");
 		DispConsole("Capture!");
 		var ret = {
@@ -266,15 +253,15 @@ function SendCameraCapture() {
 		ret.value = data;
 		// DispConsole(typeof(data));
 		// DispConsole(data.length);
-		// io.sockets.emit('r2s_CAMERA_DATA', {value : ret.value});
 		socket.emit('r2s_CAMERA_DATA', {value : ret.value});
 	});
 }
 
-// マイク
+
+// ########## マイク ##########
 function InitMic() {
-	// var micInstance = mic({
-	micInstance = mic({
+	// var mic_instance = mic({
+	mic_instance = mic({
 		// rate: '8000',
 		rate: '44100',
 		bitwidth: '16',
@@ -282,53 +269,64 @@ function InitMic() {
 		// encoding: 'unsigned-integer',
 		// device: 'plughw:0,0',
 		device: 'plughw:1,0',
-			// ##########
+			// ====================================
 			// arecord -l
 			// でカード番号とデバイス番号がわかる．
 			// arecord -d 3 -D plughw:0,0 out1.wav
 			// でカード番号，デバイス番号
-			// ##########
+			// ====================================
 		channels: '1',
 		debug: true,
 		exitOnSilence: 6
 	});
-	var micInputStream = micInstance.getAudioStream();
-	var outputFileStream = fs.WriteStream('output.raw');
-	micInputStream.pipe(outputFileStream);
-	micInputStream.on('data', function(data) {
+	var mic_input_stream = mic_instance.getAudioStream();
+	var output_file_stream = fs.WriteStream('output.raw');
+	mic_input_stream.pipe(output_file_stream);
+	mic_input_stream.on('data', function(data) {
 		// console.log("Recieved Input Stream: " + data.length);
 		DispConsole("Recieved Input Stream: " + data.length);
 		// console.log(data);
 		// console.log(data.toString("hex"));
 		// console.log(typeof(data));
 		DispConsole(typeof(data));
-		// io.sockets.emit('MIC_TEST_RAW', {value : data});
 		socket.emit('r2s_MIC_RAW_DATA', {value : data});
 		var len = data.length;
 	});
 }
 
 function StartMic() {
-	micInstance.start();
+	mic_instance.start();
 }
 
 function StpoMic() {
-	micInstance.stop();
+	mic_instance.stop();
 }
 
 
+// ########## Motor ##########
+function PowerOnMotor() {
+	const exec = require('child_process').exec;
+	exec('echo 1 > /dev/rtmotoren0', (err, stdout, stderr) => { });
+}
+function PowerOffMotor() {
+	const exec = require('child_process').exec;
+	exec('echo 0 > /dev/rtmotoren0', (err, stdout, stderr) => { });
+}
+
+function SetMotorRaw(left, right) {
+	const exec = require('child_process').exec;
+	exec('echo ' + String(left)  + ' > /dev/rtmotor_raw_l0', (err, stdout, stderr) => { });
+	exec('echo ' + String(right) + ' > /dev/rtmotor_raw_r0', (err, stdout, stderr) => { });
+}
 
 
-
-
-// その他
+// ########## Util ##########
 function DispConsole(text, sendFlag = 1) {
 	console.log(text);
 	if (sendFlag == 1) {
 		socket.emit('r2s_ROBOT_CONSOLE_MSG', {value : GetTimeStamp() + ' ' + text});
 	}
 }
-
 
 function GetTimeStamp() {
 	var now = new Date();
@@ -342,7 +340,6 @@ function GetTimeStamp() {
 	return '[' + year + '-' + month + '-' + date + ' ' + hours + ':' + minutes + ':' + seconds  + ']';
 }
 
-
 function GetTimeStruct() {
 	var now = new Date();
 	var time = {};
@@ -354,3 +351,4 @@ function GetTimeStruct() {
 	time.seconds = now.getSeconds();
 	return time;
 }
+

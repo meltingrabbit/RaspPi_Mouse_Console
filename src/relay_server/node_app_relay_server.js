@@ -11,17 +11,18 @@ var mime     = {
 
 
 var server_ws_main = http.createServer(function(req, res) {
+	var file_path = '';
 	if (req.url == '/') {
-		filePath = '/pimouse.html';			// 仮
+		file_path = '/pimouse.html';			// 仮
 	} else {
-		filePath = req.url;
+		file_path = req.url;
 	}
 
-	var fullPath = __dirname + filePath;
-	console.log('fullPath : ' + fullPath);
+	var full_path = __dirname + file_path;
+	console.log('FullPath : ' + full_path);
 
-	res.writeHead(200, {"Content-Type": mime[path.extname(fullPath)] || "text/plain"});
-	fs.readFile(fullPath, function(err, data) {
+	res.writeHead(200, {"Content-Type": mime[path.extname(full_path)] || "text/plain"});
+	fs.readFile(full_path, function(err, data) {
 		if (err) {
 			// エラー時の応答
 		} else {
@@ -36,7 +37,7 @@ var io = socketio.listen(server_ws_main);
 
 
 // 接続client一覧
-var connectedClients = {};		// IDによるハッシュ
+var connected_clients = {};		// IDによるハッシュ
 /*
 この要素のclientは，
 id : socket id
@@ -46,7 +47,6 @@ connect : 接続されている先
 
 
 io.sockets.on('connection', function(socket) {
-
 
 	DispConsole('A connection with the client has been established!');
 	DispConsole('ID: ' + socket.id);
@@ -68,16 +68,16 @@ io.sockets.on('connection', function(socket) {
 
 
 	socket.on('r2s_ROBOT_REGISTER', function(data) {
-		client = data.value;
-		client.id = data.value.id;
+		client         = data.value;
+		client.id      = data.value.id;
 		client.connect = null;
 		RegisterClient(client);
 	});
 
 	socket.on('p2s_PC_REGISTER', function(data) {
 		io.to(socket.id).emit('s2p_NOTICE_ID', {value : socket.id});
-		client = data.value;
-		client.id = socket.id;
+		client         = data.value;
+		client.id      = socket.id;
 		client.connect = null;
 		RegisterClient(client);
 	});
@@ -85,27 +85,27 @@ io.sockets.on('connection', function(socket) {
 
 	// PC - ROBOT 接続，切断
 	socket.on('p2s_CONNECT_TO_ROBOT', function(data) {
-		var robotId = data.value;
-		var pcId = client.id;
+		var robot_id = data.value;
+		var pc_id    = client.id;
 
-		if (connectedClients[robotId]) {
-			connectedClients[robotId].connect = pcId;
-			io.to(robotId).emit('s2r_CONNECT_TO_PC', null);
+		if (connected_clients[robot_id]) {
+			connected_clients[robot_id].connect = pc_id;
+			io.to(robot_id).emit('s2r_CONNECT_TO_PC', null);
 		}
-		if (connectedClients[pcId]) {
-			connectedClients[pcId].connect = robotId;
+		if (connected_clients[pc_id]) {
+			connected_clients[pc_id].connect = robot_id;
 		}
 
 		CheckConnectedClients();
 	});
 	socket.on('p2s_DISCONNECT_TO_ROBOT', function(data) {
-		var robotId = data.value;
-		var pcId = client.id;
+		var robot_id = data.value;
+		var pc_id    = client.id;
 
-		io.to(robotId).emit('s2r_DISCONNECT_TO_PC', null);
+		io.to(robot_id).emit('s2r_DISCONNECT_TO_PC', null);
 
-		UnsetConnect(robotId);
-		UnsetConnect(pcId);
+		UnsetConnect(robot_id);
+		UnsetConnect(pc_id);
 
 		CheckConnectedClients();
 	});
@@ -208,32 +208,32 @@ io.sockets.on('connection', function(socket) {
 
 
 function RegisterClient(client) {
-	connectedClients[client.id] = client;
+	connected_clients[client.id] = client;
 }
 
 function UnregisterClient(id) {
 	ResetRobot(id);
-	if (connectedClients[id]) {
-		if (connectedClients[id].connect != null) {
-			ResetRobot(connectedClients[id].connect);
+	if (connected_clients[id]) {
+		if (connected_clients[id].connect != null) {
+			ResetRobot(connected_clients[id].connect);
 		}
 	}
-	delete connectedClients[id];
+	delete connected_clients[id];
 }
 
 
 function UnsetConnect(id) {
 	ResetRobot(id);
-	if (connectedClients[id]) {
-		ResetRobot(connectedClients[id].connect);
-		connectedClients[id].connect = null;
+	if (connected_clients[id]) {
+		ResetRobot(connected_clients[id].connect);
+		connected_clients[id].connect = null;
 	}
 }
 
 function EmitSocketToConnect(id, event, data) {
-	if (connectedClients[id]) {
-		if (connectedClients[id].connect != null) {
-			io.to(connectedClients[id].connect).emit(event, data);
+	if (connected_clients[id]) {
+		if (connected_clients[id].connect != null) {
+			io.to(connected_clients[id].connect).emit(event, data);
 		} else {
 			DispConsole('Not Connected!');
 		}
@@ -243,7 +243,7 @@ function EmitSocketToConnect(id, event, data) {
 
 function SendMainTelemetry() {
 	var data = {};
-	data.connectedClients = connectedClients;
+	data.connected_clients = connected_clients;
 	io.sockets.emit('s2p_MAIN_TELEMETRY', {value : data});
 }
 
@@ -251,21 +251,21 @@ function SendMainTelemetry() {
 function CheckConnectedClients() {
 	// 存在しない接続先や，クライアントがあれば削除
 	// console.log(Object.keys(io.sockets.sockets));
-	console.log(connectedClients);
+	console.log(connected_clients);
 	var existSockets = Object.keys(io.sockets.sockets);
-	for (var id in connectedClients) {
-		if (connectedClients[id]) {
+	for (var id in connected_clients) {
+		if (connected_clients[id]) {
 			// OK
-			if (connectedClients[ connectedClients[id].connect ]) {
+			if (connected_clients[ connected_clients[id].connect ]) {
 				// OK
 			} else {
 				// 接続先が存在しない
 				UnsetConnect(id)
 			}
 
-			if (connectedClients[id].connect) {
+			if (connected_clients[id].connect) {
 				// 接続先があって，
-				if (connectedClients[ connectedClients[id].connect ].connect == id) {
+				if (connected_clients[ connected_clients[id].connect ].connect == id) {
 					// OK
 				} else {
 					// 自分が繋げてると思ってる相手が自分とつながっていない

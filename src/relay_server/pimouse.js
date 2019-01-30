@@ -1,5 +1,4 @@
 
-
 var myClient = {};
 myClient.id = null;
 
@@ -11,7 +10,6 @@ $(function() {
 
 	// ###########################################
 	// テレメ
-	// socket.on("server_to_client", function(data){appendMsg(data.value)});
 	socket.on("s2p_MAIN_TELEMETRY",     function(data){AnalyzeMainTelemetry(data.value)});
 	socket.on("s2p_NOTICE_ID",          function(data){SetId(data.value)});
 	socket.on("s2p_LS_DATA",            function(data){AppendLsLog(data.value)});
@@ -20,7 +18,7 @@ $(function() {
 	socket.on("s2p_ROBOT_CONSOLE_MSG",  function(data){AppendConsoleMsg(data.value, "#RobotConsoleLogs")});
 	socket.on("s2p_MIC_RAW_DATA",       function(data){
 		// console.log(data.value);
-		var arr = new Int16Array(data.value);
+		var arr  = new Int16Array(data.value);
 		var arrf = new Float32Array(arr.length);
 		// console.log(arr);
 		// console.log("####");
@@ -126,16 +124,12 @@ $(function() {
 		console.log("p2s_MIC OFF");
 		socket.emit("p2s_MIC_OFF", null);
 	});
-
-
-
-
 });
 
 
 
 function AnalyzeMainTelemetry(data) {
-	clients = data.connectedClients;
+	clients = data.connected_clients;
 	$("#serverConnectedPc").empty();
 	$("#serverConnectedRobot").empty();
 	for (var key in clients) {
@@ -229,8 +223,8 @@ function mic_PlayChunk(audio_src, mic_scheduled_time) {
 	}
 }
 function mic_PlayAudioStream(audio_f32) {
-	var audio_buf = mic_ctx.createBuffer(1, audio_f32.length, 44100),
-		audio_src = mic_ctx.createBufferSource(),
+	var audio_buf    = mic_ctx.createBuffer(1, audio_f32.length, 44100),
+		audio_src    = mic_ctx.createBufferSource(),
 		current_time = mic_ctx.currentTime;
 
 	audio_buf.getChannelData(0).set(audio_f32);
@@ -246,8 +240,6 @@ function mic_PlayAudioStream(audio_f32) {
 		mic_scheduled_time = current_time + audio_buf.duration + mic_initial_delay_sec;
 	}
 }
-
-
 
 
 
