@@ -1,6 +1,6 @@
 
 // settings
-var IP_RELAY_SERVER = '192.168.10.120';
+var IP_RELAY_SERVER = '192.168.10.138';
 // var IP_RELAY_SERVER = '192.168.100.108';
 
 // web camera
@@ -27,6 +27,9 @@ var fs  = require('fs');
 var mic = require('mic');
 var pcm = require('pcm');
 var mic_instance;
+
+// スピーカー
+var Speaker = require('speaker');
 
 
 // var client_ws_main = io.connect('http://192.168.10.134:3000');
@@ -62,10 +65,12 @@ socket.on('disconnect', function() {
 var timer_lt = {
 	id : null,
 	is_on : 0,
+	interval : 1000,
 }
 var timer_camera = {
 	id : null,
 	is_on : 0,
+	interval : 2500,
 }
 // 状態量変数の初期化
 var status_mic = {
@@ -132,8 +137,7 @@ socket.on('s2r_LED_OFF', function(data) {
 socket.on('s2r_CAMERA_ON', function(data) {
 	console.log('s2r_CAMERA_ON');
 	if (timer_camera.is_on == 0) {
-		timer_camera.id = setInterval(SendCameraCapture, 2500);
-		// timer_camera.id = setInterval(SendCameraCapture, 200);
+		timer_camera.id = setInterval(SendCameraCapture, timer_camera.interval);
 	}
 	timer_camera.is_on = 1;
 });
@@ -159,12 +163,37 @@ socket.on('s2r_MIC_OFF', function(data) {
 	status_mic.is_on = 0;
 });
 
+
+
+socket.on('p2s_SPEAKER_ON', function(data) {
+});
+
+socket.on('p2s_SPEAKER_OFF', function(data) {
+});
+
+
+socket.on('s2r_SPEAKER_RAW_DATA', function(data) {
+	// console.log(data.value); 			// sint16でくる
+
+	var len = Object.keys(data.value).length;
+	var arr = new Int16Array(len);
+	for (var i=0; i<len; i++) {
+		arr[i] = data.value[i];
+	}
+	StoreSpeakerData(arr);
+});
+
+
+
+
+
+
 socket.on('s2r_LS_SINGLE', function(data) {
 	SendLtValue();
 });
 socket.on('s2r_LS_SEQ_BEGIN', function(data) {
 	if (timer_lt.is_on == 0) {
-		timer_lt.id = setInterval(SendLtValue, 1000);
+		timer_lt.id = setInterval(SendLtValue, timer_lt.interval);
 	}
 	timer_lt.is_on = 1;
 });
@@ -288,9 +317,17 @@ function InitMic() {
 		// console.log(data);
 		// console.log(data.toString("hex"));
 		// console.log(typeof(data));
-		DispConsole(typeof(data));
+		// DispConsole(typeof(data));
 		socket.emit('r2s_MIC_RAW_DATA', {value : data});
 		var len = data.length;
+
+		// speakerデバッグ用
+		// console.log(Object.prototype.toString.call(data));
+		// console.log(data);
+		// speaker.write(data);
+		// for (var i=0; i<data.length; i++) {
+		// 	// speaker.write(data[i]);
+		// }
 	});
 }
 
@@ -317,6 +354,29 @@ function SetMotorRaw(left, right) {
 	const exec = require('child_process').exec;
 	exec('echo ' + String(left)  + ' > /dev/rtmotor_raw_l0', (err, stdout, stderr) => { });
 	exec('echo ' + String(right) + ' > /dev/rtmotor_raw_r0', (err, stdout, stderr) => { });
+}
+
+
+// ########## スピーカー ##########
+const speaker = new Speaker({
+	// channels: 2,          // 2 channels
+	channels: 1,          // 1 channels
+	bitDepth: 16,         // 16-bit samples
+	sampleRate: 44100,     // 44,100 Hz sample rate
+	// device: 'hw:0,0'
+});
+
+function StoreSpeakerData(data) {
+	// dataはsint16の配列
+
+	// uint8じゃないとだめっぽい
+	// console.log("SPK");
+	var buf = data.buffer;
+	// console.log(data.length);
+	// console.log(data);
+	var arr8  = new Uint8Array(buf);
+	// console.log(arr8);
+	speaker.write(arr8);
 }
 
 

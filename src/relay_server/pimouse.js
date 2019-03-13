@@ -124,6 +124,17 @@ $(function() {
 		console.log("p2s_MIC OFF");
 		socket.emit("p2s_MIC_OFF", null);
 	});
+
+	$("button#speakerOn").on('click', function() {
+		socket.emit("p2s_SPEAKER_ON", null);
+		// ここにクライアント側の録音開始操作
+		StartSpeaker(socket);
+	});
+	$("button#speakerOff").on('click', function() {
+		socket.emit("p2s_SPEAKER_OFF", null);
+		// ここにクライアント側の録音停止操作
+		StopSpeaker();
+	});
 });
 
 
@@ -210,7 +221,7 @@ function SetId(id) {
 
 
 // ###########################################
-// マイク
+// （ロボットの）マイク
 var mic_ctx = new (window.AudioContext||window.webkitAudioContext);
 var mic_initial_delay_sec = 0;
 var mic_scheduled_time = 0;
@@ -239,6 +250,46 @@ function mic_PlayAudioStream(audio_f32) {
 		mic_PlayChunk(audio_src, current_time);
 		mic_scheduled_time = current_time + audio_buf.duration + mic_initial_delay_sec;
 	}
+}
+
+
+// ###########################################
+// （ロボットの）スピーカ
+var spk_processor;
+function StartSpeaker(socket) {
+	console.log("StartSpeaker");
+	navigator.mediaDevices.getUserMedia({
+		audio: true,
+		video: false
+	}).then( stream => {
+		const context = new AudioContext();
+		const source = context.createMediaStreamSource( stream );
+		// const spk_processor = context.createScriptProcessor( 1024, 1, 1 );
+		spk_processor = context.createScriptProcessor( 1024, 1, 1 );
+
+		source.connect( spk_processor );
+		spk_processor.connect( context.destination );
+
+		spk_processor.onaudioprocess = e => {				// こいつがイベントハンドラ
+			// // send( e.inputBuffer.getChannelData( 0 ))
+			// console.log(e.inputBuffer.getChannelData(0));
+			// socket.emit("p2s_SPEAKER_RAW_DATA", {value : e.inputBuffer.getChannelData(0)});
+
+			// sint16に変換する
+			var arrf = new Float32Array(e.inputBuffer.getChannelData(0));
+			var arr  = new Int16Array(arrf.length);
+			for (var i=0; i<arr.length; i++) {		// 16bit音声なので！！
+				arr[i] = Math.round(arrf[i] * 32768.0);
+			}
+			console.log(arr);
+			socket.emit("p2s_SPEAKER_RAW_DATA", {value : arr});
+		}
+	} )
+}
+
+function StopSpeaker() {
+	spk_processor.disconnect();           // = processor.disconnect(0);
+	spk_processor.onaudioprocess = null;  // Clear onaudioprocess event handler
 }
 
 

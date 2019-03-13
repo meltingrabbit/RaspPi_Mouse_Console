@@ -183,6 +183,27 @@ io.sockets.on('connection', function(socket) {
 		EmitSocketToConnect(client.id, 's2r_MIC_OFF', null);
 	});
 
+
+
+	socket.on('p2s_SPEAKER_ON', function(data) {
+		DispConsole('p2s_MIC_OFF');
+		EmitSocketToConnect(client.id, 's2r_SPEAKER_ON', null);
+	});
+	socket.on('p2s_SPEAKER_OFF', function(data) {
+		DispConsole('p2s_MIC_OFF');
+		EmitSocketToConnect(client.id, 's2r_SPEAKER_OFF', null);
+	});
+
+	socket.on('p2s_SPEAKER_RAW_DATA', function(data) {
+		// DispConsole('p2s_SPEAKER_RAW_DATA');
+		EmitSocketToConnect(client.id, 's2r_SPEAKER_RAW_DATA', {value : data.value});
+		// console.log(data);
+	});
+
+
+
+
+
 	// ###########################################
 	// robot → client
 	socket.on('r2s_LS_DATA', function(data) {
