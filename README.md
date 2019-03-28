@@ -2,8 +2,8 @@
 Raspberry Pi Mouse / Cat を中継サーバー経由で遠隔操作するためのシステム
 
 詳細
-https://products.rt-net.jp/micromouse/archives/6859
-
++ https://products.rt-net.jp/micromouse/archives/6859
++ https://products.rt-net.jp/micromouse/archives/7359
 
 ## 内容
 #### /src/pi_mouse
